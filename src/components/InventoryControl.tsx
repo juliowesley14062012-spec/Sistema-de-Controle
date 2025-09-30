@@ -115,7 +115,7 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
   };
 
   const updateStockQuantity = (id: string, change: number) => {
-    const updatedStock = stock.map(item => 
+    const updatedStock = (Array.isArray(stock) ? stock : []).map(item => 
       item.id === id 
         ? { 
             ...item, 
@@ -138,11 +138,11 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
       totalPrice: 0,
       costPerUnit: 0
     };
-    updateStock([...stock, newItem]);
+    updateStock([...(Array.isArray(stock) ? stock : []), newItem]);
   };
 
   const updateStockItem = (id: string, field: keyof StockItem, value: string | number) => {
-    const updatedStock = stock.map(item => {
+    const updatedStock = (Array.isArray(stock) ? stock : []).map(item => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
         
@@ -191,11 +191,11 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
     return item.costPerUnit * amount;
   };
 
-  const filteredStock = stock.filter(item => 
+  const filteredStock = (Array.isArray(stock) ? stock : []).filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalInventoryValue = stock.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalInventoryValue = (Array.isArray(stock) ? stock : []).reduce((sum, item) => sum + item.totalPrice, 0);
 
   const FreezerGrid = ({ freezerNum, slots, onUpdate }: { 
     freezerNum: number; 
@@ -212,7 +212,7 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
         {/* Top row: positions 1,3,5,7 */}
         <div className="grid grid-cols-4 gap-3 col-span-4 mb-2">
           {[1, 3, 5, 7].map(pos => {
-            const slot = slots.find(s => s.position === pos);
+            const slot = (Array.isArray(slots) ? slots : []).find(s => s.position === pos);
             return (
               <div key={`${freezerNum}-${pos}`} className="relative">
                 <div className="text-sm text-center font-bold text-blue-600 mb-2">{pos}</div>
@@ -235,12 +235,11 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
         {/* Bottom row: positions 2,4,6,8 */}
         <div className="grid grid-cols-4 gap-3 col-span-4">
           {[2, 4, 6, 8].map(pos => {
-            const slot = slots.find(s => s.position === pos);
+            const slot = (Array.isArray(slots) ? slots : []).find(s => s.position === pos);
             return (
               <div key={`${freezerNum}-${pos}`} className="relative">
                 <div className="text-sm text-center font-bold text-blue-600 mb-2">{pos}</div>
                 <input
-                  key={`freezer-${freezerNum}-slot-${pos}`}
                   type="text"
                   value={slot?.content || ''}
                   onChange={(e) => onUpdate(pos, e.target.value)}
