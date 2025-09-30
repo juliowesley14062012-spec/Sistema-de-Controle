@@ -23,7 +23,7 @@ export function useFirebaseSync<T>(
     try {
       const docRef = doc(db, collectionName, documentId);
       await setDoc(docRef, {
-        ...newData,
+        value: newData,
         lastUpdated: Timestamp.now()
       }, { merge: true });
       console.log(`✅ Data updated in Firebase: ${collectionName}/${documentId}`);
@@ -48,15 +48,15 @@ export function useFirebaseSync<T>(
         
         if (docSnapshot.exists()) {
           const firebaseData = docSnapshot.data();
-          // Remove Firebase metadata before setting data
-          const { lastUpdated, ...cleanData } = firebaseData;
-          setData(cleanData as T);
+          // Extract the value field which contains our actual data
+          const actualData = firebaseData.value || initialData;
+          setData(actualData as T);
           console.log(`📥 Data received from Firebase: ${collectionName}/${documentId}`);
         } else {
           // Document doesn't exist, create it with initial data
           console.log(`📝 Creating initial document: ${collectionName}/${documentId}`);
           setDoc(docRef, {
-            ...initialData,
+            value: initialData,
             lastUpdated: Timestamp.now()
           });
           setData(initialData);
