@@ -59,6 +59,8 @@ const INITIAL_STOCK: StockItem[] = [
 export default function InventoryControl({ onBack }: InventoryControlProps) {
   const [activeTab, setActiveTab] = useState('freezer');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState<{freezer: number, position: number} | null>(null);
+  const [editValue, setEditValue] = useState('');
   
   // Firebase sync for stock items
   const { 
@@ -112,8 +114,30 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
     } else {
       updateFreezer2(updateSlot(freezer2));
     }
+    
+    // Clear selection after update
+    setSelectedSlot(null);
+    setEditValue('');
   };
 
+  const selectSlot = (freezerNum: number, position: number) => {
+    const slots = freezerNum === 1 ? freezer1 : freezer2;
+    const slot = (Array.isArray(slots) ? slots : []).find(s => s.position === position);
+    setSelectedSlot({ freezer: freezerNum, position });
+    setEditValue(slot?.content || '');
+  };
+
+  const saveSlotContent = () => {
+    if (selectedSlot) {
+      updateFreezerSlot(selectedSlot.freezer, selectedSlot.position, editValue);
+    }
+  };
+
+  const clearSlotContent = () => {
+    if (selectedSlot) {
+      updateFreezerSlot(selectedSlot.freezer, selectedSlot.position, '');
+    }
+  };
   const updateStockQuantity = (id: string, change: number) => {
     const updatedStock = (Array.isArray(stock) ? stock : []).map(item => 
       item.id === id 
@@ -200,7 +224,7 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
   const FreezerGrid = ({ freezerNum, slots, onUpdate }: { 
     freezerNum: number; 
     slots: FreezerSlot[]; 
-    onUpdate: (position: number, content: string) => void;
+    onUpdate: (freezerNum: number, position: number) => void;
   }) => (
     <div className="bg-white rounded-xl shadow-lg p-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -213,20 +237,22 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
         <div className="grid grid-cols-4 gap-3 col-span-4 mb-2">
           {[1, 3, 5, 7].map(pos => {
             const slot = (Array.isArray(slots) ? slots : []).find(s => s.position === pos);
+            const isSelected = selectedSlot?.freezer === freezerNum && selectedSlot?.position === pos;
             return (
-              <div key={`${freezerNum}-${pos}`} className="relative">
+              <div key={pos} className="relative">
                 <div className="text-sm text-center font-bold text-blue-600 mb-2">{pos}</div>
-                <input
-                  type="text"
-                  value={slot?.content || ''}
-                  onChange={(e) => onUpdate(pos, e.target.value)}
-                  className={`w-full p-3 text-sm rounded border-2 text-center ${
-                    slot?.isEmpty 
-                      ? 'bg-gray-100 border-gray-300 text-gray-500' 
-                      : 'bg-blue-100 border-blue-400 text-blue-800 font-medium'
+                <button
+                  onClick={() => onUpdate(freezerNum, pos)}
+                  className={`w-full p-3 text-sm rounded border-2 text-center transition-all ${
+                    isSelected
+                      ? 'bg-yellow-200 border-yellow-500 text-yellow-800 font-bold'
+                      : slot?.isEmpty 
+                        ? 'bg-gray-100 border-gray-300 text-gray-500 hover:bg-gray-200' 
+                        : 'bg-blue-100 border-blue-400 text-blue-800 font-medium hover:bg-blue-200'
                   }`}
-                  placeholder="Vazio"
-                />
+                >
+                  {slot?.content || 'Vazio'}
+                </button>
               </div>
             );
           })}
@@ -236,20 +262,22 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
         <div className="grid grid-cols-4 gap-3 col-span-4">
           {[2, 4, 6, 8].map(pos => {
             const slot = (Array.isArray(slots) ? slots : []).find(s => s.position === pos);
+            const isSelected = selectedSlot?.freezer === freezerNum && selectedSlot?.position === pos;
             return (
-              <div key={`${freezerNum}-${pos}`} className="relative">
+              <div key={pos} className="relative">
                 <div className="text-sm text-center font-bold text-blue-600 mb-2">{pos}</div>
-                <input
-                  type="text"
-                  value={slot?.content || ''}
-                  onChange={(e) => onUpdate(pos, e.target.value)}
-                  className={`w-full p-3 text-sm rounded border-2 text-center ${
-                    slot?.isEmpty 
-                      ? 'bg-gray-100 border-gray-300 text-gray-500' 
-                      : 'bg-blue-100 border-blue-400 text-blue-800 font-medium'
+                <button
+                  onClick={() => onUpdate(freezerNum, pos)}
+                  className={`w-full p-3 text-sm rounded border-2 text-center transition-all ${
+                    isSelected
+                      ? 'bg-yellow-200 border-yellow-500 text-yellow-800 font-bold'
+                      : slot?.isEmpty 
+                        ? 'bg-gray-100 border-gray-300 text-gray-500 hover:bg-gray-200' 
+                        : 'bg-blue-100 border-blue-400 text-blue-800 font-medium hover:bg-blue-200'
                    }`}
-                   placeholder="Vazio"
-                 />
+                >
+                  {slot?.content || 'Vazio'}
+                </button>
                </div>
              );
           })}
@@ -294,15 +322,62 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
         {/* Freezer Tab */}
         {activeTab === 'freezer' && (
           <div className="space-y-6">
+            {/* Freezer Editor */}
+            {selectedSlot && (
+              <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-400">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Snowflake className="w-5 h-5 text-yellow-500" />
+                  Editando Freezer {selectedSlot.freezer} - Posição {selectedSlot.position}
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Conteúdo da Posição
+                    </label>
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full p-3 border-2 border-yellow-400 rounded-lg text-lg"
+                      placeholder="Digite o conteúdo..."
+                      autoFocus
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={saveSlotContent}
+                      className="flex-1 bg-green-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={clearSlotContent}
+                      className="px-6 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                    >
+                      Limpar
+                    </button>
+                    <button
+                      onClick={() => setSelectedSlot(null)}
+                      className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <FreezerGrid 
               freezerNum={1} 
               slots={freezer1} 
-              onUpdate={(pos, content) => updateFreezerSlot(1, pos, content)} 
+              onUpdate={(freezerNum, pos) => selectSlot(freezerNum, pos)} 
             />
             <FreezerGrid 
               freezerNum={2} 
               slots={freezer2} 
-              onUpdate={(pos, content) => updateFreezerSlot(2, pos, content)} 
+              onUpdate={(freezerNum, pos) => selectSlot(freezerNum, pos)} 
             />
           </div>
         )}
