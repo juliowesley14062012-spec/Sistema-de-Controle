@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Minus, Package, Snowflake } from 'lucide-react';
 import Header from './Header';
 import { useFirebaseSync } from '../hooks/useFirebaseSync';
@@ -62,6 +62,9 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
   const [selectedSlot, setSelectedSlot] = useState<{freezer: number, position: number} | null>(null);
   const [editValue, setEditValue] = useState('');
   
+  // Ref for the freezer input field
+  const freezerInputRef = useRef<HTMLInputElement>(null);
+  
   // Firebase sync for stock items
   const { 
     data: stock, 
@@ -100,6 +103,16 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
 
   // Custom calculator states for each item
   const [customCalculators, setCustomCalculators] = useState<{[key: string]: {amount1: number, amount2: number}}>({});
+
+  // Effect to focus the input when selectedSlot changes
+  useEffect(() => {
+    if (selectedSlot && freezerInputRef.current) {
+      // Use setTimeout to ensure the DOM has been updated
+      setTimeout(() => {
+        freezerInputRef.current?.focus();
+      }, 100);
+    }
+  }, [selectedSlot]);
 
   const updateFreezerSlot = (freezerNum: number, position: number, content: string) => {
     const updateSlot = (slots: FreezerSlot[]) => 
@@ -274,7 +287,7 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
                       : slot?.isEmpty 
                         ? 'bg-gray-100 border-gray-300 text-gray-500 hover:bg-gray-200' 
                         : 'bg-blue-100 border-blue-400 text-blue-800 font-medium hover:bg-blue-200'
-                   }`}
+                  }`}
                 >
                   {slot?.content || 'Vazio'}
                 </button>
@@ -337,11 +350,11 @@ export default function InventoryControl({ onBack }: InventoryControlProps) {
                     </label>
                     <input
                       type="text"
+                      ref={freezerInputRef}
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-3 border-2 border-yellow-400 rounded-lg text-lg"
                       placeholder="Digite o conteúdo..."
-                      autoFocus
                     />
                   </div>
                   
